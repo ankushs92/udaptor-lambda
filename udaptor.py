@@ -9,7 +9,7 @@ import boto3
 from exceptions import AuthenticationException, Generic
 from config import get_env_variable, get_aws_keys
 import logging
-
+import requests
 
 app = Flask(__name__)
 env = get_env_variable('env')
@@ -71,12 +71,13 @@ def upload_file():
     user_id = get_jwt_identity()
     data = json.loads(request.form['json'])
     try:
-        job = upload_file(file, user_id, data)
+        job = upload_file_to_s3(file, user_id, data)
         db.session.add(job)
         db.session.commit()
+        json_resp = json.loads(get_output_file_url(user_id, data, job.file_url))
         return jsonify({
             "success" : True,
-            "message" : "We have started processing your file, please wait for a few minutes"
+            "outputFileUrl" : json_resp['outputFileUrl']
         })
     except Exception as er:
         logging.error(er)
@@ -93,7 +94,7 @@ def error_handler(error):
 def passwords_match(user, password):
     return password == user.password
 
-def upload_file(file, user_id, data):
+def upload_file_to_s3(file, user_id, data):
     from models import Job, PossibleJobStates
     aws_keys = get_aws_keys()
     session = boto3.Session(
@@ -127,13 +128,19 @@ def upload_file(file, user_id, data):
     return job_state
 
 
-def get_output_file_url(user_id, data):
+def get_output_file_url(user_id, data, file_url):
     input_vendor = data['input_vendor']
     output_vendor = data['output_vendor']
     json_req = jsonify({
-
+        "userId": user_id,
+        "dataProvider" : input_vendor,
+        "dataReceiver" : output_vendor,
+        "s3Url": file_url
     })
-    return None
+    udaptor_batch_service_url = get_env_variable('udaptor_batch_service')
+    job_response = requests.post(udaptor_batch_service_url, json_req)
+
+    return job_response.content
 
 if __name__ == '__main__':
     app.run()
