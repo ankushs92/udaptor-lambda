@@ -1,0 +1,14 @@
+{
+    "dev": {
+        "app_function": "udaptor.app",
+        "aws_region": "eu-west-1",
+        "profile_name": "default",
+        "project_name": "udaptor-api",
+        "runtime": "python3.7",
+        "s3_bucket": "udaptor",
+        "role_name": "ZappaUdaptorRole",
+        "manage_roles" : false,
+        "role_arn": "arn:aws:iam::674045386252:role/ZappaUdaptorRole"
+    }
+
+}
