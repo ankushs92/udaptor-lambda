@@ -11,4 +11,7 @@ export SECRET_KEY="1335033206121610771176501449150036155913"
 export BUCKET_URL="https://s3-eu-west-1.amazonaws.com/udaptor/"
 export FOLDER_NAME="input-files/"
 export BUCKET_NAME="udaptor"
+export udaptor_batch_service="http://localhost:8080/v1/job"
+export postgres_timeout=10
+
 printenv | grep "DEBUG\|STARTUP_SIGNUP_TABLE\|AWS_REGION\|NEW_SIGNUP_TOPIC"

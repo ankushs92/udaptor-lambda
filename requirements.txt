@@ -5,4 +5,4 @@ boto3
 flask-jwt-extended
 zappa
 jmespath==0.9.3
-lambda-packages
+requests

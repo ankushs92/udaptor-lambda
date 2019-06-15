@@ -12,7 +12,7 @@ def get_aws_keys():
     AWS_ACCESS_KEY = get_env_variable('aws_access_key_id')
     AWS_SECRET_KEY = get_env_variable('aws_secret_key')
 
-    return AWS_ACCESS_KEY, AWS_SECRET_KEY
+    return (AWS_ACCESS_KEY, AWS_SECRET_KEY)
 
 def create_db_url(user, pw, url, db):
     if user is None or pw is None:
@@ -45,6 +45,7 @@ class Config(object):
     # SQLAlchemy settings
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = get_env_variable('SECRET_KEY')
+    SQLALCHEMY_POOL_RECYCLE = int(get_env_variable('postgres_timeout'))
     # Flask Settings
     DEBUG = False
     TESTING = False
@@ -52,13 +53,14 @@ class Config(object):
 
 class DevelopmentConfig(Config):
     SQLALCHEMY_DATABASE_URI = DEV_DB_URL
-    FLASK_ENV = "development"
+    FLASK_ENV = "dev"
     DEBUG = True
 
 
 class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = PROD_DB_URL
-    FLASK_ENV = "production"
+    print(SQLALCHEMY_DATABASE_URI)
+    FLASK_ENV = "prod"
 
-    DEBUG = False
-    TESTING = False
+    DEBUG = True
+    TESTING = True

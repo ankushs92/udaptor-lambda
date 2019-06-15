@@ -10,13 +10,17 @@ from exceptions import AuthenticationException, Generic
 from config import get_env_variable, get_aws_keys
 import logging
 import requests
+import traceback
 
 app = Flask(__name__)
 env = get_env_variable('env')
 if env == 'dev':
     app.config.from_object(DevelopmentConfig)
+    logging.info("Tables have been created in Postgres")
+
 elif env == 'prod':
     app.config.from_object(ProductionConfig)
+
 else:
     logging.error("Error. Invalid Environment. Must be Either dev or prod")
 
@@ -42,20 +46,24 @@ def index():
 def login():
     from models import User
     json_req = request.get_json()
+
     username = json_req.get("username", None)
+    print("Username is " + username)
     password = json_req.get("password", None)
+    print("password is " + password)
     if not (username and password):
         raise AuthenticationException("Username or pass not provided")
     user = db.session.query(User).filter_by(email=username).first()
+    print("Was this executed")
     if user is not None:
         if passwords_match(user, password):
             # Pass the User id as the payload identity
             token_expiration = timedelta(days=365)
-            access_token = create_access_token(str(user.id), expires_delta= token_expiration)
+            access_token = create_access_token(str(user.id), expires_delta=token_expiration)
             return jsonify({
-                "access_token" : access_token
+                "access_token": access_token
             })
-        else :
+        else:
             raise AuthenticationException("Invalid Username or password")
 
     else:
@@ -63,18 +71,20 @@ def login():
 
 
 
-
 @app.route('/v1.0/file', methods=['POST'])
 @jwt_required
 def upload_file():
+    from models import User
+
     file = request.files['file']
     user_id = get_jwt_identity()
     data = json.loads(request.form['json'])
+    user = db.session.query(User).filter_by(id=user_id).first()
     try:
         job = upload_file_to_s3(file, user_id, data)
         db.session.add(job)
         db.session.commit()
-        json_resp = json.loads(get_output_file_url(user_id, data, job.file_url))
+        json_resp = json.loads(get_output_file_url(user, data, job.file_url))
         return jsonify({
             "success" : True,
             "outputFileUrl" : json_resp['outputFileUrl']
@@ -128,18 +138,20 @@ def upload_file_to_s3(file, user_id, data):
     return job_state
 
 
-def get_output_file_url(user_id, data, file_url):
+def get_output_file_url(user, data, file_url):
     input_vendor = data['input_vendor']
     output_vendor = data['output_vendor']
-    json_req = jsonify({
-        "userId": user_id,
-        "dataProvider" : input_vendor,
-        "dataReceiver" : output_vendor,
-        "s3Url": file_url
-    })
+    data = {
+        "email": user.email,
+        "inputFormat" : input_vendor,
+        "outputFormat" : output_vendor,
+        "urlS3": file_url
+    }
     udaptor_batch_service_url = get_env_variable('udaptor_batch_service')
-    job_response = requests.post(udaptor_batch_service_url, json_req)
-
+    http_headers = {
+        'content-type': 'application/json; charset=utf-8'
+    }
+    job_response = requests.post(udaptor_batch_service_url, json=data, headers=http_headers)
     return job_response.content
 
 if __name__ == '__main__':
